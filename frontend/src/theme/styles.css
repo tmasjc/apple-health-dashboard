@@ -1,0 +1,361 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #f5f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui,
+    sans-serif;
+  color: #1d1d1f;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f5f5f7;
+}
+::-webkit-scrollbar-thumb {
+  background: #c7c7cc;
+  border-radius: 3px;
+}
+
+/* ── Layout ─────────────────────────────────────────────────── */
+
+.dashboard {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3rem;
+  margin-bottom: 2rem;
+}
+
+.header-left {
+  flex-shrink: 0;
+}
+
+.header-right {
+  flex-shrink: 0;
+}
+
+.page-title {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 200;
+  font-size: 2.8rem;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  color: #1d1d1f;
+  transform: scaleY(1.15);
+  transform-origin: top left;
+}
+
+.nav-pills {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.nav-pill {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6e6e73;
+  text-decoration: none;
+  padding: 0.25rem 0.6rem;
+  border-radius: 100px;
+  background: #f0f0f2;
+  border: 1px solid #d1d1d6;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.nav-pill:hover {
+  background: #e5e5e7;
+  color: #1d1d1f;
+}
+
+/* ── Date control ───────────────────────────────────────────── */
+
+.date-control {
+  background: #fff;
+  border: 1px solid #e5e5e7;
+  border-radius: 14px;
+  padding: 0.85rem 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 620px;
+}
+
+/* Top row: presets + days badge */
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  border: none;
+  background: #e8e8ed;
+  color: #48484a;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+
+.preset-btn:hover {
+  background: #ffdca8;
+  color: #c06000;
+}
+
+.preset-btn.active {
+  background: #ff9500;
+  color: #fff;
+}
+
+.days-combo {
+  display: flex;
+  align-items: stretch;
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.days-combo-label {
+  background: #3a3a3c;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 0.15rem 0.5rem;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  border-radius: 100px 0 0 100px;
+}
+
+.days-combo-value {
+  background: #ff9500;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+  white-space: nowrap;
+  text-align: center;
+  border-radius: 0 100px 100px 0;
+}
+
+/* Date pickers row */
+.date-pickers {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.date-picker-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.date-picker-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #86868b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.date-picker-field input[type="date"] {
+  border: 1px solid #d1d1d6;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #1d1d1f;
+  background: #fafafa;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.date-picker-field input[type="date"]:focus {
+  border-color: #ff9500;
+}
+
+.date-picker-sep {
+  color: #c7c7cc;
+  font-size: 0.9rem;
+}
+
+/* ── Sections ───────────────────────────────────────────────── */
+
+.section-header {
+  color: #1d1d1f;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui,
+    sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid #d1d1d6;
+  padding-bottom: 0.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.section-desc {
+  font-size: 0.7rem;
+  color: #aeaeb2;
+  margin-top: -0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+/* ── Chart cards ────────────────────────────────────────────── */
+
+.chart-card {
+  background: #ffffff;
+  border: 1px solid #e5e5e7;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 1rem;
+}
+
+.chart-card h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 0.5rem;
+}
+
+.chart-card .empty-msg {
+  color: #86868b;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.chart-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #86868b;
+  font-size: 0.85rem;
+}
+
+/* ── KPI cards ──────────────────────────────────────────────── */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.kpi-card {
+  background: #ffffff;
+  border: 1px solid #e5e5e7;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.kpi-card .kpi-label {
+  font-size: 0.75rem;
+  color: #6e6e73;
+  margin-bottom: 0.25rem;
+}
+
+.kpi-card .kpi-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.kpi-card .kpi-delta {
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 0.15rem;
+}
+
+.kpi-card .kpi-desc {
+  font-size: 0.65rem;
+  color: #aeaeb2;
+  margin-top: 0.4rem;
+  line-height: 1.35;
+}
+
+.kpi-delta.positive {
+  color: #70AD47;
+}
+.kpi-delta.negative {
+  color: #D46A6A;
+}
+.kpi-delta.neutral {
+  color: #86868b;
+}
+
+/* ── Workout panel ──────────────────────────────────────────── */
+
+.workout-inner {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 1rem;
+}
+
+.workout-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e5e7;
+}
+
+.legend-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  border: 1px solid #e5e5e7;
+  background: #fff;
+  transition: opacity 0.15s;
+  user-select: none;
+}
+
+.legend-chip.hidden {
+  opacity: 0.35;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+

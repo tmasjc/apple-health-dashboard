@@ -1,0 +1,12 @@
+[project]
+name = "health-dashboard"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.14"
+dependencies = [
+    "lxml>=6.0.2",
+    "pandas>=2.3.3",
+    "plotly>=6.6.0",
+    "pyarrow>=23.0.1",
+    "streamlit>=1.55.0",
+]

@@ -52,7 +52,7 @@ function Dashboard() {
       {/* Header */}
       <div className="header">
         <div className="header-left">
-          <h1 className="page-title">Hello Thomas</h1>
+          <h1 className="page-title">Hello Awesome</h1>
           <div className="nav-pills">
             <a href="#overview" className="nav-pill">📊 Overview</a>
             <a href="#fitness" className="nav-pill">💪 Fitness</a>

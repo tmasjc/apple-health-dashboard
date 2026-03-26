@@ -4,10 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-A personal health dashboard visualising Apple Health data. It has two generations:
-
-1. **Legacy Streamlit app** (`app.py`) — standalone, run with `uv run streamlit run app.py`
-2. **Current full-stack app** (FastAPI + React/Vite) — the active version
+A personal health dashboard visualising Apple Health data, built with FastAPI + React/Vite.
 
 ## Running the App
 

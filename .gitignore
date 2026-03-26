@@ -9,4 +9,6 @@ wheels/
 # Virtual environments
 .venv
 data
+apple_health_export
+*.zip
 CLAUDE.md

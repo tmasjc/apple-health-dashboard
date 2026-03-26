@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 from lxml.etree import iterparse
 
-EXPORT_XML = Path(__file__).parent.parent / "apple_health_export" / "export.xml"
+EXPORT_XML = Path(__file__).parent / "apple_health_export" / "export.xml"
 DATA_DIR = Path(__file__).parent / "data"
 
 # Record types we care about, grouped by output file

@@ -3,7 +3,7 @@
 # setup.sh — End-to-end pipeline: unzip → parse → install → serve
 #
 # Assumes:
-#   • The Apple Health export zip lives in the parent directory (../‹name›.zip)
+#   • The Apple Health export zip lives in the working directory (./‹name›.zip)
 #   • uv, node, and npm are available on PATH
 #
 # Usage:
@@ -42,29 +42,29 @@ step "Locating Apple Health export zip"
 if [[ -n "${1:-}" ]]; then
     ZIP_FILE="$1"
 else
-    # Auto-detect: find a .zip in the parent directory
+    # Auto-detect: find a .zip in the working directory
     ZIP_FILE=""
-    for f in "$PARENT"/*.zip; do
+    for f in "$DIR"/*.zip; do
         [[ -f "$f" ]] && ZIP_FILE="$f" && break
     done
 fi
 
-[[ -z "$ZIP_FILE" ]] && fail "No zip file found in $PARENT. Pass the path as an argument: ./setup.sh /path/to/export.zip"
+[[ -z "$ZIP_FILE" ]] && fail "No zip file found in $DIR. Pass the path as an argument: ./setup.sh /path/to/export.zip"
 [[ ! -f "$ZIP_FILE" ]] && fail "File not found: $ZIP_FILE"
 
 ZIP_SIZE=$(stat -f%z "$ZIP_FILE" 2>/dev/null || stat -c%s "$ZIP_FILE" 2>/dev/null)
 echo "  Found: $ZIP_FILE ($(( ZIP_SIZE / 1024 / 1024 )) MB)"
 
 # ── 2. Unzip the export ─────────────────────────────────────────────────────
-EXPORT_DIR="$PARENT/apple_health_export"
+EXPORT_DIR="$DIR/apple_health_export"
 EXPORT_XML="$EXPORT_DIR/export.xml"
 
 if [[ -f "$EXPORT_XML" ]]; then
     warn "export.xml already exists at $EXPORT_XML — skipping unzip."
 else
-    step "Unzipping Apple Health export to $PARENT/"
+    step "Unzipping Apple Health export to $DIR/"
     # Only extract export.xml (skip GPX routes — they can be large and are unused)
-    unzip -o "$ZIP_FILE" "apple_health_export/export.xml" -d "$PARENT"
+    unzip -o "$ZIP_FILE" "apple_health_export/export.xml" -d "$DIR"
     echo "  Extracted: $EXPORT_XML"
 fi
 

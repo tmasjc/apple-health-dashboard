@@ -34,7 +34,7 @@ cd frontend && npm run build
 
 `parse_export.py` is a streaming XML parser (lxml iterparse) that converts Apple Health `export.xml` (~2 GB) into Parquet files in `data/`. The `data/` directory is gitignored. Four Parquet files are produced: `records.parquet`, `workouts.parquet`, `workout_stats.parquet`, `activity_summary.parquet`.
 
-Run the parser: `uv run python parse_export.py` (expects `../apple_health_export/export.xml` relative to the project root).
+Run the parser: `uv run python parse_export.py` (expects `apple_health_export/export.xml` inside the project root).
 
 ## Architecture
 

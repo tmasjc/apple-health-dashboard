@@ -1,5 +1,7 @@
 """Apple-inspired color palette and color maps."""
 
+import itertools
+
 BLUE = "#5B9BD5"
 GREEN = "#70AD47"
 ORANGE = "#ED7D31"
@@ -15,13 +17,26 @@ WORKOUT_COLORS = {
     "FunctionalStrengthTraining": PINK,
     "Walking": GREEN,
     "Running": BLUE,
-    "Cycling": ORANGE,
-    "HighIntensityIntervalTraining": PURPLE,
-    "Elliptical": TEAL,
-    "Rowing": INDIGO,
-    "Hiking": "#8ABD6E",
-    "Other": "#A8A8AD",
 }
+
+
+
+def build_workout_color_map(
+    workout_types: list[str],
+    overrides: dict[str, str] = WORKOUT_COLORS,
+    palette: list[str] = COLORWAY,
+) -> dict[str, str]:
+    sorted_types = sorted(workout_types)
+    used_colors = {overrides[t] for t in sorted_types if t in overrides}
+    available = [c for c in palette if c not in used_colors]
+    if not available:
+        available = palette
+    pool = itertools.cycle(available)
+    return {
+        t: overrides[t] if t in overrides else next(pool)
+        for t in sorted_types
+    }
+
 
 SLEEP_STAGE_COLORS = {
     "Deep": INDIGO,

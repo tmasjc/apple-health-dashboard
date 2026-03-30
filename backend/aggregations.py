@@ -9,8 +9,8 @@ from typing import Any
 import pandas as pd
 
 from .constants import (
-    BLUE, GREEN, INDIGO, ORANGE, PINK, PURPLE, TEAL,
-    CHART_LAYOUT, SLEEP_STAGE_COLORS, WORKOUT_COLORS,
+    BLUE, GREEN, ORANGE, PINK, PURPLE, TEAL,
+    CHART_LAYOUT, SLEEP_STAGE_COLORS, build_workout_color_map,
 )
 from .data_loader import activity, records, sleep_df, workouts
 
@@ -136,6 +136,7 @@ def get_workouts(start: date, end: date) -> dict | None:
         .str.replace("HKWorkoutActivityType", "")
         .value_counts()
     )
+    color_map = build_workout_color_map(wk_counts.index.tolist())
     donut_traces = [
         {
             "type": "pie",
@@ -144,9 +145,9 @@ def get_workouts(start: date, end: date) -> dict | None:
             "hole": 0.45,
             "marker": {
                 "colors": [
-                    WORKOUT_COLORS.get(t, "#8E8E93") for t in wk_counts.index
+                    color_map[t] for t in wk_counts.index
                 ],
-                "line": {"color": "#ffffff", "width": 2},
+                "line": {"color": "#000000", "width": 1},
             },
             "textfont": {"color": "#1d1d1f"},
             "showlegend": False,
@@ -173,7 +174,8 @@ def get_workouts(start: date, end: date) -> dict | None:
                 "y": sub["count"].tolist(),
                 "name": wtype,
                 "marker": {
-                    "color": WORKOUT_COLORS.get(wtype, "#8E8E93"),
+                    "color": color_map.get(wtype, "#8E8E93"),
+                    "line": {"color": "#000000", "width": 1},
                 },
                 "showlegend": False,
                 "hovertemplate": f"{wtype}: " + "%{y} sessions<extra></extra>",
@@ -201,7 +203,7 @@ def get_workouts(start: date, end: date) -> dict | None:
             ),
         },
         "types": [
-            {"name": t, "color": WORKOUT_COLORS.get(t, "#8E8E93")}
+            {"name": t, "color": color_map[t]}
             for t in all_types
         ],
     }

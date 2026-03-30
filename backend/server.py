@@ -1,26 +1,56 @@
 """FastAPI server for the Health Dashboard."""
 
-from datetime import date, timedelta
+import json
+from datetime import date
+from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from . import aggregations as agg
 from .data_loader import max_date, min_date
+
+PROFILE_PATH = Path(__file__).resolve().parent.parent / "profile.json"
+DEFAULT_PROFILE = {"display_name": "", "gender": "male"}
 
 app = FastAPI(title="Health Dashboard API")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
 
+def _read_profile() -> dict:
+    try:
+        return json.loads(PROFILE_PATH.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        return DEFAULT_PROFILE.copy()
+
+
+class ProfileBody(BaseModel):
+    display_name: str = ""
+    gender: Literal["male", "female"] = "male"
+
+
 @app.get("/api/meta")
 def meta():
-    return {"min_date": str(min_date), "max_date": str(max_date)}
+    return {
+        "min_date": str(min_date),
+        "max_date": str(max_date),
+        "profile": _read_profile(),
+    }
+
+
+@app.post("/api/profile")
+def save_profile(body: ProfileBody):
+    data = body.model_dump()
+    PROFILE_PATH.write_text(json.dumps(data, indent=2) + "\n")
+    return data
 
 
 @app.get("/api/kpis")
@@ -44,8 +74,9 @@ def workouts_endpoint(
 def vo2(
     start: date = Query(...),
     end: date = Query(...),
+    gender: str = Query("male"),
 ):
-    return agg.get_vo2(start, end) or {"traces": [], "layout": {}}
+    return agg.get_vo2(start, end, gender) or {"traces": [], "layout": {}}
 
 
 @app.get("/api/rhr-hrv")

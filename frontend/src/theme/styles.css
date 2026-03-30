@@ -359,3 +359,107 @@ body {
   border-radius: 50%;
 }
 
+/* ── Settings button ───────────────────────────────────────── */
+
+.settings-btn {
+  background: #e0e0e2;
+  border-color: #c7c7cc;
+  color: #48484a;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.settings-btn:hover {
+  background: #d1d1d6;
+  color: #1d1d1f;
+}
+
+/* ── Profile modal ─────────────────────────────────────────── */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.5rem 2rem;
+  width: 360px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+}
+
+.modal-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6e6e73;
+  margin-bottom: 12px;
+}
+
+.modal-input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #d1d1d6;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.modal-input:focus {
+  border-color: #ff9500;
+}
+
+.modal-fieldset {
+  border: none;
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+.modal-radio {
+  font-size: 0.85rem;
+  margin-right: 16px;
+  cursor: pointer;
+}
+
+.modal-radio input {
+  margin-right: 4px;
+}
+
+.modal-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.modal-btn-primary {
+  background: #ff9500;
+  color: #fff;
+}
+
+.modal-btn-primary:hover {
+  background: #e08600;
+}
+
+.modal-btn-secondary {
+  background: #e8e8ed;
+  color: #48484a;
+}
+
+.modal-btn-secondary:hover {
+  background: #d1d1d6;
+}
+

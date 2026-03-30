@@ -8,7 +8,7 @@ GREY = "#8E8E93"
 
 
 def test_known_types_get_override_colors() -> None:
-    types = ["Running", "Walking", "Cycling"]
+    types = ["Running", "Walking", "FunctionalStrengthTraining"]
     result = build_workout_color_map(types)
     for t in types:
         assert result[t] == WORKOUT_COLORS[t]

@@ -1,6 +1,12 @@
+export interface Profile {
+  display_name: string;
+  gender: "male" | "female";
+}
+
 export interface Meta {
   min_date: string;
   max_date: string;
+  profile: Profile;
 }
 
 export interface KpiItem {

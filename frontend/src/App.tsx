@@ -1,14 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import DateRangeSlider from "./components/DateRangeSlider";
 import KpiCards from "./components/KpiCards";
 import ChartCard from "./components/ChartCard";
 import PlotlyChart from "./components/PlotlyChart";
+import ProfileModal from "./components/ProfileModal";
 import WorkoutPanel from "./components/WorkoutPanel";
 import {
   useKpis,
   useMeta,
   usePlotEndpoint,
+  useSaveProfile,
   useWorkouts,
 } from "./hooks/useHealthData";
 
@@ -22,9 +24,11 @@ function addDays(dateStr: string, days: number): string {
 
 function Dashboard() {
   const { data: meta, isLoading: metaLoading } = useMeta();
+  const saveProfile = useSaveProfile();
 
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const [showProfile, setShowProfile] = useState(false);
 
   const effectiveStart = start || (meta ? addDays(meta.max_date, -180) : "");
   const effectiveEnd = end || meta?.max_date || "";
@@ -34,9 +38,11 @@ function Dashboard() {
     setEnd(e);
   }, []);
 
+  const gender = meta?.profile.gender || "male";
+
   const { data: kpis } = useKpis(effectiveStart, effectiveEnd);
   const { data: workoutsData } = useWorkouts(effectiveStart, effectiveEnd);
-  const { data: vo2 } = usePlotEndpoint("vo2", effectiveStart, effectiveEnd);
+  const { data: vo2 } = usePlotEndpoint("vo2", effectiveStart, effectiveEnd, { gender });
   const { data: rhrHrv } = usePlotEndpoint("rhr-hrv", effectiveStart, effectiveEnd);
   const { data: sleepStages } = usePlotEndpoint("sleep-stages", effectiveStart, effectiveEnd);
   const { data: sleepDuration } = usePlotEndpoint("sleep-duration", effectiveStart, effectiveEnd);
@@ -47,17 +53,26 @@ function Dashboard() {
     return <div className="dashboard"><div className="chart-loading">Loading...</div></div>;
   }
 
+  const greeting = meta.profile.display_name || "Awesome";
+
   return (
     <div className="dashboard">
       {/* Header */}
       <div className="header">
         <div className="header-left">
-          <h1 className="page-title">Hello Awesome</h1>
+          <h1 className="page-title">Hello {greeting}</h1>
           <div className="nav-pills">
             <a href="#overview" className="nav-pill">📊 Overview</a>
             <a href="#fitness" className="nav-pill">💪 Fitness</a>
             <a href="#heart" className="nav-pill">❤️ Heart</a>
             <a href="#sleep" className="nav-pill">😴 Sleep</a>
+            <button
+              className="nav-pill settings-btn"
+              onClick={() => setShowProfile(true)}
+              title="Profile settings"
+            >
+              ⚙️ Profile
+            </button>
           </div>
         </div>
         <div className="header-right">
@@ -68,6 +83,14 @@ function Dashboard() {
           />
         </div>
       </div>
+
+      {showProfile && (
+        <ProfileModal
+          profile={meta.profile}
+          onSave={(p) => saveProfile.mutate(p)}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
 
       {/* Overview */}
       <div id="overview" className="section-header">Overview</div>

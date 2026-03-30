@@ -212,7 +212,23 @@ def get_workouts(start: date, end: date) -> dict | None:
 # ── VO2 Max ─────────────────────────────────────────────────────────────────
 
 
-def get_vo2(start: date, end: date) -> dict | None:
+VO2_BANDS: dict[str, list[tuple[str, float, float, str]]] = {
+    "male": [
+        ("Superior",   51.1, 60.0, GREEN),
+        ("Excellent",  43.9, 51.1, BLUE),
+        ("Good",       36.7, 43.9, ORANGE),
+        ("Below Good", 20.0, 36.7, "#FF3B30"),
+    ],
+    "female": [
+        ("Superior",   44.2, 55.0, GREEN),
+        ("Excellent",  37.8, 44.2, BLUE),
+        ("Good",       30.2, 37.8, ORANGE),
+        ("Below Good", 20.0, 30.2, "#FF3B30"),
+    ],
+}
+
+
+def get_vo2(start: date, end: date, gender: str = "male") -> dict | None:
     rec_f = filter_date(records, start, end)
     vo2 = _get_type(rec_f, "HKQuantityTypeIdentifierVO2Max")
     if vo2.empty:
@@ -222,34 +238,22 @@ def get_vo2(start: date, end: date) -> dict | None:
         vo2.groupby("date")["value"].mean().reset_index().sort_values("date")
     )
 
+    bands = VO2_BANDS.get(gender, VO2_BANDS["male"])
     shapes = [
-        {"type": "rect", "xref": "paper", "x0": 0, "x1": 1,
-         "y0": 51.1, "y1": 60, "fillcolor": GREEN, "opacity": 0.08,
-         "line": {"width": 0}},
-        {"type": "rect", "xref": "paper", "x0": 0, "x1": 1,
-         "y0": 43.9, "y1": 51.1, "fillcolor": BLUE, "opacity": 0.08,
-         "line": {"width": 0}},
-        {"type": "rect", "xref": "paper", "x0": 0, "x1": 1,
-         "y0": 36.7, "y1": 43.9, "fillcolor": ORANGE, "opacity": 0.08,
-         "line": {"width": 0}},
-        {"type": "rect", "xref": "paper", "x0": 0, "x1": 1,
-         "y0": 20, "y1": 36.7, "fillcolor": "#FF3B30", "opacity": 0.08,
-         "line": {"width": 0}},
+        {
+            "type": "rect", "xref": "paper", "x0": 0, "x1": 1,
+            "y0": y0, "y1": y1, "fillcolor": color, "opacity": 0.08,
+            "line": {"width": 0},
+        }
+        for _, y0, y1, color in bands
     ]
-
     annotations = [
-        {"x": 1, "xref": "paper", "xanchor": "right",
-         "y": 55.5, "text": "Superior", "showarrow": False,
-         "font": {"size": 10, "color": "#86868b"}},
-        {"x": 1, "xref": "paper", "xanchor": "right",
-         "y": 47.5, "text": "Excellent", "showarrow": False,
-         "font": {"size": 10, "color": "#86868b"}},
-        {"x": 1, "xref": "paper", "xanchor": "right",
-         "y": 40.3, "text": "Good", "showarrow": False,
-         "font": {"size": 10, "color": "#86868b"}},
-        {"x": 1, "xref": "paper", "xanchor": "right",
-         "y": 28, "text": "Below Good", "showarrow": False,
-         "font": {"size": 10, "color": "#86868b"}},
+        {
+            "x": 1, "xref": "paper", "xanchor": "right",
+            "y": (y0 + y1) / 2, "text": label, "showarrow": False,
+            "font": {"size": 10, "color": "#86868b"},
+        }
+        for label, y0, y1, _ in bands
     ]
 
     traces = [

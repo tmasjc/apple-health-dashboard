@@ -580,11 +580,12 @@ def get_sleep_consistency(start: date, end: date) -> dict | None:
                "domain": [0, 0.47]},
         yaxis={"gridcolor": "#e5e5e7", "zerolinecolor": "#d1d1d6",
                "tickvals": bed_ticks, "ticktext": bed_labels,
-               "domain": [0, 1]},
+               "range": [-6, 6], "domain": [0, 1]},
         xaxis2={"gridcolor": "#e5e5e7", "zerolinecolor": "#d1d1d6",
                 "domain": [0.53, 1], "anchor": "y2"},
         yaxis2={"gridcolor": "#e5e5e7", "zerolinecolor": "#d1d1d6",
                 "tickvals": wake_ticks, "ticktext": wake_labels,
+                "range": [4, 14], "side": "right",
                 "domain": [0, 1], "anchor": "x2"},
         annotations=[
             {"text": "Bedtime", "x": 0.235, "xref": "paper",

@@ -92,6 +92,11 @@ def _flush_records(batch: list[dict], writer: pq.ParquetWriter) -> None:
     df = pd.DataFrame(batch)
     df["value_text"] = df["value"]
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
+    # Strip UTC offset so timestamps are stored as local wall-clock time.
+    # Without this, PyArrow silently converts tz-aware datetimes to UTC
+    # when writing to a tz-naive parquet schema, shifting all hours.
+    df["startDate"] = df["startDate"].str.replace(r"\s*[+-]\d{4}$", "", regex=True)
+    df["endDate"] = df["endDate"].str.replace(r"\s*[+-]\d{4}$", "", regex=True)
     df["startDate"] = pd.to_datetime(df["startDate"], format="mixed")
     df["endDate"] = pd.to_datetime(df["endDate"], format="mixed")
     table = pa.Table.from_pandas(df, schema=RECORDS_SCHEMA, preserve_index=False)
@@ -223,6 +228,12 @@ def parse_export():
     df_workouts = pd.DataFrame(workouts)
     for col in ("duration", "totalDistance", "totalEnergyBurned"):
         df_workouts[col] = pd.to_numeric(df_workouts[col], errors="coerce")
+    df_workouts["startDate"] = df_workouts["startDate"].str.replace(
+        r"\s*[+-]\d{4}$", "", regex=True
+    )
+    df_workouts["endDate"] = df_workouts["endDate"].str.replace(
+        r"\s*[+-]\d{4}$", "", regex=True
+    )
     df_workouts["startDate"] = pd.to_datetime(
         df_workouts["startDate"], format="mixed"
     )

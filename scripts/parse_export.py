@@ -174,7 +174,12 @@ def parse_export():
     df_records["value"] = pd.to_numeric(df_records["value"], errors="coerce")
     df_records["startDate"] = pd.to_datetime(df_records["startDate"], format="mixed")
     df_records["endDate"] = pd.to_datetime(df_records["endDate"], format="mixed")
-    df_records.to_parquet(DATA_DIR / "records.parquet", index=False)
+    # Sort by (type, startDate) so PyArrow row-group statistics enable
+    # efficient predicate pushdown when filtering by type + date range.
+    df_records = df_records.sort_values(["type", "startDate"]).reset_index(drop=True)
+    df_records.to_parquet(
+        DATA_DIR / "records.parquet", index=False, row_group_size=50_000,
+    )
     print(f"  records.parquet: {len(df_records):,} rows")
 
     df_workouts = pd.DataFrame(workouts)

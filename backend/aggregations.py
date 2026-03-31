@@ -12,7 +12,12 @@ from .constants import (
     BLUE, GREEN, ORANGE, PINK, PURPLE, TEAL,
     CHART_LAYOUT, SLEEP_STAGE_COLORS, build_workout_color_map,
 )
-from .data_loader import activity, records, sleep_df, workouts
+from .data_loader import (
+    get_activity,
+    get_workouts as load_workouts,
+    query_records,
+    query_sleep,
+)
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -44,10 +49,6 @@ def _base_layout(height: int = 400, **overrides: Any) -> dict:
     return layout
 
 
-def _get_type(df: pd.DataFrame, type_name: str) -> pd.DataFrame:
-    return df[df["type"] == type_name].copy()
-
-
 def _safe_list(values) -> list:
     """Convert to list, replacing NaN/inf with None for JSON compliance."""
     return [None if (isinstance(v, float) and (math.isnan(v) or math.isinf(v))) else v for v in values]
@@ -71,8 +72,8 @@ def _hour_to_time_str(h: float, short: bool = False) -> str:
 
 
 def get_kpis(start: date, end: date) -> dict:
+    activity = get_activity()
     act_f = filter_date(activity, start, end, col="date")
-    rec_f = filter_date(records, start, end)
 
     # Preceding period of equal length for delta calculation
     range_days = (end - start).days
@@ -94,7 +95,7 @@ def get_kpis(start: date, end: date) -> dict:
         "stand_hrs": _kpi("appleStandHours"),
     }
 
-    steps = _get_type(rec_f, "HKQuantityTypeIdentifierStepCount")
+    steps = query_records(start, end, "HKQuantityTypeIdentifierStepCount")
     if not steps.empty and not act_f.empty:
         steps_daily = steps.groupby("date")["value"].sum()
         # Current range dates
@@ -102,8 +103,7 @@ def get_kpis(start: date, end: date) -> dict:
         cur_steps = steps_daily.reindex(cur_dates).mean()
         # Previous range dates
         prev_dates = pd.date_range(start=prev_start, end=prev_end).date
-        rec_prev = filter_date(records, prev_start, prev_end)
-        steps_prev = _get_type(rec_prev, "HKQuantityTypeIdentifierStepCount")
+        steps_prev = query_records(prev_start, prev_end, "HKQuantityTypeIdentifierStepCount")
         if not steps_prev.empty:
             steps_daily_prev = steps_prev.groupby("date")["value"].sum()
             prev_steps = steps_daily_prev.reindex(prev_dates).mean()
@@ -126,7 +126,7 @@ def get_kpis(start: date, end: date) -> dict:
 
 
 def get_workouts(start: date, end: date) -> dict | None:
-    wk = filter_date(workouts, start, end)
+    wk = filter_date(load_workouts(), start, end)
     if wk.empty:
         return None
 
@@ -229,8 +229,7 @@ VO2_BANDS: dict[str, list[tuple[str, float, float, str]]] = {
 
 
 def get_vo2(start: date, end: date, gender: str = "male") -> dict | None:
-    rec_f = filter_date(records, start, end)
-    vo2 = _get_type(rec_f, "HKQuantityTypeIdentifierVO2Max")
+    vo2 = query_records(start, end, "HKQuantityTypeIdentifierVO2Max")
     if vo2.empty:
         return None
 
@@ -302,9 +301,8 @@ def get_vo2(start: date, end: date, gender: str = "male") -> dict | None:
 
 
 def get_rhr_hrv(start: date, end: date) -> dict | None:
-    rec_f = filter_date(records, start, end)
-    rhr = _get_type(rec_f, "HKQuantityTypeIdentifierRestingHeartRate")
-    hrv = _get_type(rec_f, "HKQuantityTypeIdentifierHeartRateVariabilitySDNN")
+    rhr = query_records(start, end, "HKQuantityTypeIdentifierRestingHeartRate")
+    hrv = query_records(start, end, "HKQuantityTypeIdentifierHeartRateVariabilitySDNN")
     if rhr.empty or hrv.empty:
         return None
 
@@ -356,7 +354,7 @@ def get_rhr_hrv(start: date, end: date) -> dict | None:
 
 
 def get_sleep_stages(start: date, end: date) -> dict | None:
-    sdf = filter_date(sleep_df, start, end, col="night")
+    sdf = query_sleep(start, end)
     if sdf.empty:
         return None
 
@@ -413,7 +411,7 @@ def get_sleep_stages(start: date, end: date) -> dict | None:
 
 
 def get_sleep_duration(start: date, end: date) -> dict | None:
-    sdf = filter_date(sleep_df, start, end, col="night")
+    sdf = query_sleep(start, end)
     if sdf.empty:
         return None
 
@@ -466,7 +464,7 @@ def get_sleep_duration(start: date, end: date) -> dict | None:
 
 
 def get_sleep_consistency(start: date, end: date) -> dict | None:
-    sdf = filter_date(sleep_df, start, end, col="night")
+    sdf = query_sleep(start, end)
     if sdf.empty:
         return None
 
@@ -605,9 +603,8 @@ def get_sleep_consistency(start: date, end: date) -> dict | None:
 
 
 def get_wrist_temp(start: date, end: date) -> dict | None:
-    rec_f = filter_date(records, start, end)
-    wtemp = _get_type(
-        rec_f, "HKQuantityTypeIdentifierAppleSleepingWristTemperature"
+    wtemp = query_records(
+        start, end, "HKQuantityTypeIdentifierAppleSleepingWristTemperature"
     )
     if wtemp.empty:
         return None

@@ -6,7 +6,7 @@ This file provides development guidance for contributors. For setup and running 
 
 ### Backend (`backend/`)
 
-- **`data_loader.py`** — Loads all Parquet files into pandas DataFrames at import time; prepares a derived `sleep_df` DataFrame. Exposes `records`, `workouts`, `activity`, `sleep_df`, `min_date`, `max_date`.
+- **`data_loader.py`** — Query-based data access using PyArrow filtered reads. Exposes `query_records(start, end, record_type)`, `query_sleep(start, end)`, `get_workouts()`, `get_activity()`, `get_date_bounds()`. Records are read from Parquet on demand with predicate pushdown; workouts and activity are lazily cached in memory.
 - **`aggregations.py`** — Pure functions (`get_kpis`, `get_workouts`, `get_vo2`, `get_rhr_hrv`, `get_sleep_stages`, `get_sleep_duration`, `get_sleep_consistency`, `get_wrist_temp`) that filter/aggregate DataFrames and return Plotly-compatible JSON dicts (traces + layout).
 - **`constants.py`** — Color palette and shared Plotly layout config.
 - **`server.py`** — FastAPI app. All endpoints accept `start` and `end` date query params and delegate to `aggregations`.

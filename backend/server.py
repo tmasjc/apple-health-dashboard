@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from . import aggregations as agg
-from .data_loader import max_date, min_date
+from .data_loader import get_date_bounds
 
 PROFILE_PATH = Path(__file__).resolve().parent.parent / "profile.json"
 DEFAULT_PROFILE = {"display_name": "", "gender": "male"}
@@ -39,6 +39,7 @@ class ProfileBody(BaseModel):
 
 @app.get("/api/meta")
 def meta():
+    min_date, max_date = get_date_bounds()
     return {
         "min_date": str(min_date),
         "max_date": str(max_date),

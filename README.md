@@ -4,7 +4,7 @@ A personal dashboard for visualizing Apple Health data, built with FastAPI and R
 
 ## Quick Start
 
-This project is designed to be set up by a Claude Code agent. Just open Claude Code in this directory and say:
+This project is designed to be set up by a LLM agent. Just activate your LLM in this directory and say:
 
 > I have my Apple Health export zip. Set up the dashboard.
 

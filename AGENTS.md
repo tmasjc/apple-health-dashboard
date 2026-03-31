@@ -1,37 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## What This Is
-
-A personal health dashboard visualising Apple Health data, built with FastAPI + React/Vite.
-
-## Running the App
-
-```bash
-# Start both backend and frontend dev servers concurrently:
-./run.sh
-
-# Or start them individually:
-uv run uvicorn backend.server:app --port 8001 --reload   # API at localhost:8001
-cd frontend && npm run dev                                 # UI at localhost:5173
-```
-
-Frontend proxies `/api` requests to the backend via Vite config.
-
-```bash
-# Frontend lint
-cd frontend && npx eslint .
-
-# Frontend build
-cd frontend && npm run build
-```
-
-## Data Pipeline
-
-`parse_export.py` is a streaming XML parser (lxml iterparse) that converts Apple Health `export.xml` (~2 GB) into Parquet files in `data/`. The `data/` directory is gitignored. Four Parquet files are produced: `records.parquet`, `workouts.parquet`, `workout_stats.parquet`, `activity_summary.parquet`.
-
-Run the parser: `uv run python parse_export.py` (expects `apple_health_export/export.xml` inside the project root).
+This file provides development guidance for contributors. For setup and running instructions, see `SKILL.md`.
 
 ## Architecture
 
@@ -56,3 +25,27 @@ React 19 + TypeScript + Vite. Charts rendered with `react-plotly.js`. Data fetch
 ### Key Pattern
 
 Backend aggregation functions return `{"traces": [...], "layout": {...}}` dicts that the frontend passes directly to Plotly. The frontend does not transform chart data — it renders whatever the backend returns.
+
+### Scripts (`scripts/`)
+
+- **`setup.sh`** — Full pipeline: unzip export, install deps, parse XML, start servers.
+- **`run.sh`** — Restart servers only (skips setup steps).
+- **`parse_export.py`** — Streaming XML parser (lxml iterparse) converting Apple Health `export.xml` (~2 GB) into four Parquet files in `data/`: `records.parquet`, `workouts.parquet`, `workout_stats.parquet`, `activity_summary.parquet`.
+
+## Dev Commands
+
+```bash
+# Frontend lint
+cd frontend && npx eslint .
+
+# Frontend build
+cd frontend && npm run build
+
+# Python tests
+uv run pytest
+
+# Start servers (dev)
+scripts/run.sh
+```
+
+Frontend proxies `/api` requests to the backend via Vite config.

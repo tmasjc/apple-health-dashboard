@@ -3,17 +3,17 @@
 # setup.sh — End-to-end pipeline: unzip → parse → install → serve
 #
 # Assumes:
-#   • The Apple Health export zip lives in the working directory (./‹name›.zip)
+#   • The Apple Health export zip lives in the project root (./‹name›.zip)
 #   • uv, node, and npm are available on PATH
 #
 # Usage:
-#   ./setup.sh                 # auto-detect the zip in ../
-#   ./setup.sh ../custom.zip   # specify a zip explicitly
+#   scripts/setup.sh                 # auto-detect the zip in project root
+#   scripts/setup.sh /path/to.zip    # specify a zip explicitly
 # ──────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-DIR="$(cd "$(dirname "$0")" && pwd)"
-PARENT="$(dirname "$DIR")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(dirname "$SCRIPT_DIR")"
 
 # ── Colours for log output ───────────────────────────────────────────────────
 GREEN='\033[0;32m'
@@ -42,38 +42,38 @@ step "Locating Apple Health export zip"
 if [[ -n "${1:-}" ]]; then
     ZIP_FILE="$1"
 else
-    # Auto-detect: find a .zip in the working directory
+    # Auto-detect: find a .zip in the project root
     ZIP_FILE=""
-    for f in "$DIR"/*.zip; do
+    for f in "$ROOT"/*.zip; do
         [[ -f "$f" ]] && ZIP_FILE="$f" && break
     done
 fi
 
-[[ -z "$ZIP_FILE" ]] && fail "No zip file found in $DIR. Pass the path as an argument: ./setup.sh /path/to/export.zip"
+[[ -z "$ZIP_FILE" ]] && fail "No zip file found in $ROOT. Pass the path as an argument: scripts/setup.sh /path/to/export.zip"
 [[ ! -f "$ZIP_FILE" ]] && fail "File not found: $ZIP_FILE"
 
 ZIP_SIZE=$(stat -f%z "$ZIP_FILE" 2>/dev/null || stat -c%s "$ZIP_FILE" 2>/dev/null)
 echo "  Found: $ZIP_FILE ($(( ZIP_SIZE / 1024 / 1024 )) MB)"
 
 # ── 2. Unzip the export ─────────────────────────────────────────────────────
-EXPORT_DIR="$DIR/apple_health_export"
+EXPORT_DIR="$ROOT/apple_health_export"
 EXPORT_XML="$EXPORT_DIR/export.xml"
 
 if [[ -f "$EXPORT_XML" ]]; then
     warn "export.xml already exists at $EXPORT_XML — skipping unzip."
 else
-    step "Unzipping Apple Health export to $DIR/"
+    step "Unzipping Apple Health export to $ROOT/"
     # Only extract export.xml (skip GPX routes — they can be large and are unused)
-    unzip -o "$ZIP_FILE" "apple_health_export/export.xml" -d "$DIR"
+    unzip -o "$ZIP_FILE" "apple_health_export/export.xml" -d "$ROOT"
     echo "  Extracted: $EXPORT_XML"
 fi
 
 # ── 3. Install Python dependencies ──────────────────────────────────────────
 step "Installing Python dependencies (uv sync)"
-(cd "$DIR" && uv sync)
+(cd "$ROOT" && uv sync)
 
 # ── 4. Parse export.xml → Parquet files ──────────────────────────────────────
-DATA_DIR="$DIR/data"
+DATA_DIR="$ROOT/data"
 PARQUET_FILES=("records.parquet" "workouts.parquet" "workout_stats.parquet" "activity_summary.parquet")
 
 # Check if all expected parquet files exist
@@ -91,12 +91,12 @@ if $ALL_PRESENT; then
 else
     step "Parsing export.xml → Parquet (this may take a few minutes for large exports)"
     mkdir -p "$DATA_DIR"
-    (cd "$DIR" && uv run python parse_export.py)
+    (cd "$ROOT" && uv run python scripts/parse_export.py)
 fi
 
 # ── 5. Install frontend dependencies ────────────────────────────────────────
 step "Installing frontend dependencies (npm install)"
-(cd "$DIR/frontend" && npm install)
+(cd "$ROOT/frontend" && npm install)
 
 # ── 6. Start the dashboard ──────────────────────────────────────────────────
 step "Starting dashboard"
@@ -115,7 +115,7 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
-(cd "$DIR" && uv run uvicorn backend.server:app --port 8001 --reload) &
-(cd "$DIR/frontend" && npm run dev) &
+(cd "$ROOT" && uv run uvicorn backend.server:app --port 8001 --reload) &
+(cd "$ROOT/frontend" && npm run dev) &
 
 wait

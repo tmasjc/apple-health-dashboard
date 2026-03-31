@@ -1,6 +1,14 @@
 ---
 name: apple-health-dashboard
-description: Build, set up, fix, or restart the Apple Health dashboard from an iPhone export zip. ALWAYS use this skill when the user mentions any of: "apple health", "health export", "health dashboard", "health data zip", "export.xml", "setup.sh", "parse_export", iPhone health data, sleep/workout/VO2 stats visualization, or troubleshooting a broken health dashboard (e.g. after moving folders, stale venv, blank page). Also trigger for vague requests like "I want to see my health data", "I have my health export", or "the dashboard isn't working". This skill handles cold start, data refresh, and common failures.
+description: >
+  Build, set up, fix, or restart the Apple Health dashboard from an iPhone
+  export zip. ALWAYS use this skill when the user mentions any of: apple health,
+  health export, health dashboard, health data zip, export.xml, setup.sh,
+  parse_export, iPhone health data, sleep/workout/VO2 stats visualization, or
+  troubleshooting a broken health dashboard (e.g. after moving folders, stale
+  venv, blank page). Also trigger for vague requests like "I want to see my
+  health data", "I have my health export", or "the dashboard isn't working".
+  This skill handles cold start, data refresh, and common failures.
 ---
 
 # Apple Health Dashboard

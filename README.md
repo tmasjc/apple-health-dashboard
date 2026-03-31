@@ -1,34 +1,26 @@
 # Apple Health Dashboard
 
-A personal dashboard for visualizing Apple Health data, built with FastAPI and React/Vite.
+Visualize your Apple Health data with a FastAPI + React dashboard.
 
-## Quick Start
+## Setup
 
-This project is designed to be set up by a LLM agent. Just activate your LLM in this directory and say:
+Install [`SKILL.md`](SKILL.md) as a skill in Claude Code (or any agent that supports skills), then say:
 
-> I have my Apple Health export zip. Set up the dashboard.
+> Set up the dashboard with my health export.
 
-The agent reads `SKILL.md` and handles everything: locating your zip, installing dependencies, parsing the data, and launching the dashboard.
+The skill handles everything: locating your zip, installing dependencies, parsing the data, and launching the dashboard.
 
-## Prerequisites
+**Requires:** [uv](https://docs.astral.sh/uv/), [Node.js](https://nodejs.org/) >= 18
 
-- [uv](https://docs.astral.sh/uv/) (Python toolchain)
-- [Node.js](https://nodejs.org/) >= 18
-
-## Manual Setup
-
-If you prefer to run it yourself:
+**Manual alternative:**
 
 ```bash
-# Full pipeline: unzip, parse, install, serve
-scripts/setup.sh /path/to/apple_health_export.zip
-
-# Or restart servers only (after initial setup)
-scripts/run.sh
+scripts/setup.sh /path/to/export.zip   # full pipeline
+scripts/run.sh                          # restart servers only
 ```
 
-Then open http://localhost:5173.
+Dashboard runs at http://localhost:5173.
 
-## Exporting Data from iPhone
+## Getting Your Data
 
-Open the **Health** app on your iPhone, tap your profile picture, then **Export All Health Data**. This produces a zip file you can AirDrop or transfer to your Mac.
+iPhone Health app > profile picture > **Export All Health Data** > AirDrop or transfer the zip to your Mac.

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides development guidance for contributors. For setup and running instructions, see `SKILL.md`.
+This file provides development guidance for contributors. For setup and running instructions, see `SETUP.md`.
 
 ## Architecture
 

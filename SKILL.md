@@ -93,10 +93,10 @@ cd "$PROJECT_DIR" && rm -rf .venv && uv sync
 
 ## Step 3 — Run the setup pipeline
 
-`scripts/setup.sh` does everything in one shot:
+Run setup with `NO_SERVE=1` so it exits after installation instead of blocking on long-running servers (which would be killed by the Bash tool timeout):
 
 ```bash
-cd "$PROJECT_DIR" && scripts/setup.sh /path/to/export.zip
+cd "$PROJECT_DIR" && NO_SERVE=1 scripts/setup.sh /path/to/export.zip
 ```
 
 What it does internally:
@@ -104,18 +104,20 @@ What it does internally:
 2. Runs `uv sync` (Python deps)
 3. Parses `export.xml` into Parquet files in `data/` via `scripts/parse_export.py`
 4. Runs `npm install` in `frontend/`
-5. Starts both servers and blocks (Ctrl+C to stop)
 
 The parse step streams a ~2 GB XML file — it takes a few minutes. Let the user know so they don't think it's hung.
 
-## Step 4 — Open the dashboard
+## Step 4 — Start the dashboard
 
-Once both servers are running:
-```bash
-open http://localhost:5173
+The servers must run in the **user's terminal**, not through the Bash tool (which sandboxes and kills long-running processes). Tell the user to run:
+
+```
+! cd "$PROJECT_DIR" && scripts/run.sh
 ```
 
-Backend API is at `http://localhost:8001` if the user wants to poke at it directly.
+The `!` prefix runs the command directly in the user's shell session so the servers persist. Once both servers are up:
+- Frontend → http://localhost:5173
+- Backend API → http://localhost:8001
 
 ## Troubleshooting
 

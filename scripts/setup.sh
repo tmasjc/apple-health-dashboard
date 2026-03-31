@@ -98,7 +98,14 @@ fi
 step "Installing frontend dependencies (npm install)"
 (cd "$ROOT/frontend" && npm install)
 
-# ── 6. Start the dashboard ──────────────────────────────────────────────────
+# ── 6. Start the dashboard (skip with --no-serve) ──────────────────────────
+if [[ "${NO_SERVE:-}" == "1" ]]; then
+    step "Setup complete (--no-serve mode)"
+    echo "  To start the dashboard, run:"
+    echo "    cd $ROOT && scripts/run.sh"
+    exit 0
+fi
+
 step "Starting dashboard"
 echo "  Backend  → http://localhost:8001  (FastAPI + uvicorn)"
 echo "  Frontend → http://localhost:5173  (Vite dev server)"

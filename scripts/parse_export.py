@@ -1,6 +1,7 @@
 """
 Streaming parser for Apple Health export.xml → Parquet files.
 Uses lxml iterparse to handle the ~2 GB XML without loading it into memory.
+Records are flushed to Parquet in batches to avoid OOM on large exports.
 """
 
 import sys
@@ -8,6 +9,8 @@ import time
 from pathlib import Path
 
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 from lxml.etree import iterparse
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -69,14 +72,44 @@ RECORD_TYPES = {
 }
 
 
+BATCH_SIZE = 50_000
+
+RECORDS_SCHEMA = pa.schema(
+    [
+        ("type", pa.string()),
+        ("sourceName", pa.string()),
+        ("unit", pa.string()),
+        ("value", pa.float64()),
+        ("value_text", pa.string()),
+        ("startDate", pa.timestamp("us")),
+        ("endDate", pa.timestamp("us")),
+    ]
+)
+
+
+def _flush_records(batch: list[dict], writer: pq.ParquetWriter) -> None:
+    """Convert a batch of raw record dicts to a typed RecordBatch and write it."""
+    df = pd.DataFrame(batch)
+    df["value_text"] = df["value"]
+    df["value"] = pd.to_numeric(df["value"], errors="coerce")
+    df["startDate"] = pd.to_datetime(df["startDate"], format="mixed")
+    df["endDate"] = pd.to_datetime(df["endDate"], format="mixed")
+    table = pa.Table.from_pandas(df, schema=RECORDS_SCHEMA, preserve_index=False)
+    writer.write_table(table)
+
+
 def parse_export():
     DATA_DIR.mkdir(exist_ok=True)
 
-    records = []
-    workouts = []
-    workout_stats = []
-    activity_summaries = []
+    records_batch: list[dict] = []
+    workouts: list[dict] = []
+    workout_stats: list[dict] = []
+    activity_summaries: list[dict] = []
     record_count = 0
+    kept_count = 0
+
+    records_path = DATA_DIR / "records.parquet"
+    records_tmp = DATA_DIR / "records.parquet.tmp"
 
     print(f"Parsing {EXPORT_XML} ...")
     t0 = time.time()
@@ -85,102 +118,107 @@ def parse_export():
         str(EXPORT_XML), events=("end",), tag=("Record", "Workout", "ActivitySummary")
     )
 
-    for event, elem in context:
-        tag = elem.tag
+    writer = pq.ParquetWriter(str(records_tmp), RECORDS_SCHEMA)
 
-        if tag == "Record":
-            rtype = elem.get("type")
-            if rtype in RECORD_TYPES:
-                raw_value = elem.get("value")
-                records.append(
-                    {
-                        "type": rtype,
-                        "sourceName": elem.get("sourceName"),
-                        "unit": elem.get("unit"),
-                        "value": raw_value,
-                        "startDate": elem.get("startDate"),
-                        "endDate": elem.get("endDate"),
-                    }
-                )
-            record_count += 1
-            if record_count % 500_000 == 0:
-                elapsed = time.time() - t0
-                print(f"  ... {record_count:,} records scanned ({elapsed:.0f}s)")
+    try:
+        for event, elem in context:
+            tag = elem.tag
 
-        elif tag == "Workout":
-            w = {
-                "workoutActivityType": elem.get("workoutActivityType"),
-                "duration": elem.get("duration"),
-                "durationUnit": elem.get("durationUnit"),
-                "totalDistance": elem.get("totalDistance"),
-                "totalDistanceUnit": elem.get("totalDistanceUnit"),
-                "totalEnergyBurned": elem.get("totalEnergyBurned"),
-                "totalEnergyBurnedUnit": elem.get("totalEnergyBurnedUnit"),
-                "sourceName": elem.get("sourceName"),
-                "startDate": elem.get("startDate"),
-                "endDate": elem.get("endDate"),
-            }
-            workouts.append(w)
+            if tag == "Record":
+                rtype = elem.get("type")
+                if rtype in RECORD_TYPES:
+                    records_batch.append(
+                        {
+                            "type": rtype,
+                            "sourceName": elem.get("sourceName"),
+                            "unit": elem.get("unit"),
+                            "value": elem.get("value"),
+                            "startDate": elem.get("startDate"),
+                            "endDate": elem.get("endDate"),
+                        }
+                    )
+                    kept_count += 1
+                    if len(records_batch) >= BATCH_SIZE:
+                        _flush_records(records_batch, writer)
+                        records_batch.clear()
+                record_count += 1
+                if record_count % 500_000 == 0:
+                    elapsed = time.time() - t0
+                    print(f"  ... {record_count:,} records scanned ({elapsed:.0f}s)")
 
-            # Capture WorkoutStatistics children
-            for stat in elem.findall("WorkoutStatistics"):
-                workout_stats.append(
-                    {
-                        "workoutStartDate": w["startDate"],
-                        "type": stat.get("type"),
-                        "startDate": stat.get("startDate"),
-                        "endDate": stat.get("endDate"),
-                        "average": stat.get("average"),
-                        "minimum": stat.get("minimum"),
-                        "maximum": stat.get("maximum"),
-                        "sum": stat.get("sum"),
-                        "unit": stat.get("unit"),
-                    }
-                )
+            elif tag == "Workout":
+                w = {
+                    "workoutActivityType": elem.get("workoutActivityType"),
+                    "duration": elem.get("duration"),
+                    "durationUnit": elem.get("durationUnit"),
+                    "totalDistance": elem.get("totalDistance"),
+                    "totalDistanceUnit": elem.get("totalDistanceUnit"),
+                    "totalEnergyBurned": elem.get("totalEnergyBurned"),
+                    "totalEnergyBurnedUnit": elem.get("totalEnergyBurnedUnit"),
+                    "sourceName": elem.get("sourceName"),
+                    "startDate": elem.get("startDate"),
+                    "endDate": elem.get("endDate"),
+                }
+                workouts.append(w)
 
-        elif tag == "ActivitySummary":
-            dc = elem.get("dateComponents", "")
-            if dc and dc > "2000":  # skip placeholder dates
-                activity_summaries.append(
-                    {
-                        "date": dc,
-                        "activeEnergyBurned": elem.get("activeEnergyBurned"),
-                        "activeEnergyBurnedGoal": elem.get("activeEnergyBurnedGoal"),
-                        "appleExerciseTime": elem.get("appleExerciseTime"),
-                        "appleExerciseTimeGoal": elem.get("appleExerciseTimeGoal"),
-                        "appleStandHours": elem.get("appleStandHours"),
-                        "appleStandHoursGoal": elem.get("appleStandHoursGoal"),
-                    }
-                )
+                for stat in elem.findall("WorkoutStatistics"):
+                    workout_stats.append(
+                        {
+                            "workoutStartDate": w["startDate"],
+                            "type": stat.get("type"),
+                            "startDate": stat.get("startDate"),
+                            "endDate": stat.get("endDate"),
+                            "average": stat.get("average"),
+                            "minimum": stat.get("minimum"),
+                            "maximum": stat.get("maximum"),
+                            "sum": stat.get("sum"),
+                            "unit": stat.get("unit"),
+                        }
+                    )
 
-        # Free memory
-        elem.clear()
-        while elem.getprevious() is not None:
-            del elem.getparent()[0]
+            elif tag == "ActivitySummary":
+                dc = elem.get("dateComponents", "")
+                if dc and dc > "2000":
+                    activity_summaries.append(
+                        {
+                            "date": dc,
+                            "activeEnergyBurned": elem.get("activeEnergyBurned"),
+                            "activeEnergyBurnedGoal": elem.get("activeEnergyBurnedGoal"),
+                            "appleExerciseTime": elem.get("appleExerciseTime"),
+                            "appleExerciseTimeGoal": elem.get("appleExerciseTimeGoal"),
+                            "appleStandHours": elem.get("appleStandHours"),
+                            "appleStandHoursGoal": elem.get("appleStandHoursGoal"),
+                        }
+                    )
+
+            elem.clear()
+            while elem.getprevious() is not None:
+                del elem.getparent()[0]
+
+        # Flush remaining records
+        if records_batch:
+            _flush_records(records_batch, writer)
+            records_batch.clear()
+
+    finally:
+        writer.close()
+
+    # Atomically replace the output file
+    records_tmp.rename(records_path)
+
+    # Re-read and sort so row-group statistics enable predicate pushdown
+    table = pq.read_table(str(records_path))
+    table = table.sort_by([("type", "ascending"), ("startDate", "ascending")])
+    pq.write_table(table, str(records_path), row_group_size=BATCH_SIZE)
 
     elapsed = time.time() - t0
     print(f"Done scanning in {elapsed:.0f}s. Total XML records: {record_count:,}")
-    print(f"  Kept records: {len(records):,}")
+    print(f"  Kept records: {kept_count:,}")
     print(f"  Workouts: {len(workouts):,}")
     print(f"  Workout stats: {len(workout_stats):,}")
     print(f"  Activity summaries: {len(activity_summaries):,}")
 
-    # Convert and save
-    print("Writing parquet files ...")
-
-    df_records = pd.DataFrame(records)
-    # Keep raw text value for category types (e.g. sleep stages)
-    df_records["value_text"] = df_records["value"]
-    df_records["value"] = pd.to_numeric(df_records["value"], errors="coerce")
-    df_records["startDate"] = pd.to_datetime(df_records["startDate"], format="mixed")
-    df_records["endDate"] = pd.to_datetime(df_records["endDate"], format="mixed")
-    # Sort by (type, startDate) so PyArrow row-group statistics enable
-    # efficient predicate pushdown when filtering by type + date range.
-    df_records = df_records.sort_values(["type", "startDate"]).reset_index(drop=True)
-    df_records.to_parquet(
-        DATA_DIR / "records.parquet", index=False, row_group_size=50_000,
-    )
-    print(f"  records.parquet: {len(df_records):,} rows")
+    print("Writing remaining parquet files ...")
 
     df_workouts = pd.DataFrame(workouts)
     for col in ("duration", "totalDistance", "totalEnergyBurned"):

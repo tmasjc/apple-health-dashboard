@@ -4,7 +4,6 @@ Uses lxml iterparse to handle the ~2 GB XML without loading it into memory.
 Records are flushed to Parquet in batches to avoid OOM on large exports.
 """
 
-import sys
 import time
 from pathlib import Path
 

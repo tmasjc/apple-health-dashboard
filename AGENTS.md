@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 This file provides development guidance for contributors. For setup and running instructions, see `SETUP.md`.
 

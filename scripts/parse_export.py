@@ -86,19 +86,45 @@ RECORDS_SCHEMA = pa.schema(
     ]
 )
 
+# Apple Health timestamps look like "2024-11-03 01:30:00 -0700". We store the
+# local wall-clock time (offset dropped) so charts show local hours rather than
+# UTC-shifted ones. An explicit format vectorizes parsing; format="mixed" would
+# re-infer the format per element across millions of rows on the hot path.
+_OFFSET_RE = r"\s*([+-]\d{4})$"
+_TS_FMT = "%Y-%m-%d %H:%M:%S"
+
+
+def _to_naive_local(ts: pd.Series) -> pd.Series:
+    """Parse Apple-Health timestamps to naive local wall-clock (UTC offset dropped)."""
+    stripped = ts.str.replace(_OFFSET_RE, "", regex=True)
+    return pd.to_datetime(stripped, format=_TS_FMT)
+
+
+def _offset_minutes(ts: pd.Series) -> pd.Series:
+    """Extract the signed UTC offset, in minutes, from Apple-Health timestamps."""
+    offset = ts.str.extract(_OFFSET_RE, expand=False)
+    sign = offset.str[0].map({"+": 1, "-": -1})
+    hours = pd.to_numeric(offset.str[1:3], errors="coerce")
+    minutes = pd.to_numeric(offset.str[3:5], errors="coerce")
+    return (sign * (hours * 60 + minutes)).fillna(0)
+
 
 def _flush_records(batch: list[dict], writer: pq.ParquetWriter) -> None:
     """Convert a batch of raw record dicts to a typed RecordBatch and write it."""
     df = pd.DataFrame(batch)
     df["value_text"] = df["value"]
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
-    # Strip UTC offset so timestamps are stored as local wall-clock time.
-    # Without this, PyArrow silently converts tz-aware datetimes to UTC
-    # when writing to a tz-naive parquet schema, shifting all hours.
-    df["startDate"] = df["startDate"].str.replace(r"\s*[+-]\d{4}$", "", regex=True)
-    df["endDate"] = df["endDate"].str.replace(r"\s*[+-]\d{4}$", "", regex=True)
-    df["startDate"] = pd.to_datetime(df["startDate"], format="mixed")
-    df["endDate"] = pd.to_datetime(df["endDate"], format="mixed")
+    # Store local wall-clock time (offset dropped); without this PyArrow converts
+    # tz-aware datetimes to UTC on write to the tz-naive schema, shifting hours.
+    # Realign endDate into startDate's offset frame so (endDate - startDate) stays
+    # the true elapsed interval even when a record straddles a DST / timezone
+    # change and its two boundaries carry different UTC offsets (stripping them
+    # independently would corrupt the duration — negative or off by the offset).
+    start_local = _to_naive_local(df["startDate"])
+    end_local = _to_naive_local(df["endDate"])
+    offset_delta = _offset_minutes(df["startDate"]) - _offset_minutes(df["endDate"])
+    df["startDate"] = start_local
+    df["endDate"] = end_local + pd.to_timedelta(offset_delta, unit="m")
     table = pa.Table.from_pandas(df, schema=RECORDS_SCHEMA, preserve_index=False)
     writer.write_table(table)
 
@@ -228,16 +254,8 @@ def parse_export():
     df_workouts = pd.DataFrame(workouts)
     for col in ("duration", "totalDistance", "totalEnergyBurned"):
         df_workouts[col] = pd.to_numeric(df_workouts[col], errors="coerce")
-    df_workouts["startDate"] = df_workouts["startDate"].str.replace(
-        r"\s*[+-]\d{4}$", "", regex=True
-    )
-    df_workouts["endDate"] = df_workouts["endDate"].str.replace(
-        r"\s*[+-]\d{4}$", "", regex=True
-    )
-    df_workouts["startDate"] = pd.to_datetime(
-        df_workouts["startDate"], format="mixed"
-    )
-    df_workouts["endDate"] = pd.to_datetime(df_workouts["endDate"], format="mixed")
+    df_workouts["startDate"] = _to_naive_local(df_workouts["startDate"])
+    df_workouts["endDate"] = _to_naive_local(df_workouts["endDate"])
     df_workouts.to_parquet(DATA_DIR / "workouts.parquet", index=False)
     print(f"  workouts.parquet: {len(df_workouts):,} rows")
 

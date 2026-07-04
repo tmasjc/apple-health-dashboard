@@ -488,6 +488,8 @@ def get_sleep_consistency(start: date, end: date) -> dict | None:
     consistency = consistency[
         (consistency["bed_hour_adj"] >= -6)
         & (consistency["bed_hour_adj"] <= 6)
+        & (consistency["wake_hour"] >= 4)
+        & (consistency["wake_hour"] <= 14)
     ]
     if consistency.empty:
         return None

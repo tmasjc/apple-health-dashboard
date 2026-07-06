@@ -8,8 +8,8 @@ interface Props {
 
 export default function ChartCard({ title, children, className = "" }: Props) {
   return (
-    <div className={`chart-card ${className}`}>
-      <h3>{title}</h3>
+    <div className={`card ${className}`}>
+      <h3 className="card-title">{title}</h3>
       {children}
     </div>
   );

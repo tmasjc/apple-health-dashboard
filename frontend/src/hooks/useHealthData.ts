@@ -23,10 +23,11 @@ export function useKpis(start: string, end: string) {
   });
 }
 
-export function useWorkouts(start: string, end: string) {
+export function useWorkouts(start: string, end: string, theme: string) {
   return useQuery({
-    queryKey: ["workouts", start, end],
-    queryFn: () => fetchApi<WorkoutsResponse>("/workouts", dateParams(start, end)),
+    queryKey: ["workouts", start, end, theme],
+    queryFn: () =>
+      fetchApi<WorkoutsResponse>("/workouts", { ...dateParams(start, end), theme }),
     staleTime: Infinity,
     enabled: !!start && !!end,
   });

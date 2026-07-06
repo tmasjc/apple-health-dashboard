@@ -2,5 +2,7 @@
 import reactPlotly from "react-plotly.js";
 
 // Vite CJS interop may wrap the module — unwrap if needed
-const Plot = (reactPlotly as any).default ?? reactPlotly;
+const Plot =
+  (reactPlotly as unknown as { default?: typeof reactPlotly }).default ??
+  reactPlotly;
 export default Plot;

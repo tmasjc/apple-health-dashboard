@@ -62,12 +62,16 @@ def kpis(
     return agg.get_kpis(start, end)
 
 
+Theme = Literal["light", "dark"]
+
+
 @app.get("/api/workouts")
 def workouts_endpoint(
     start: date = Query(...),
     end: date = Query(...),
+    theme: Theme = Query("light"),
 ):
-    data = agg.get_workouts(start, end)
+    data = agg.get_workouts(start, end, theme)
     return data or {"donut": None, "bar": None, "types": []}
 
 
@@ -76,40 +80,45 @@ def vo2(
     start: date = Query(...),
     end: date = Query(...),
     gender: str = Query("male"),
+    theme: Theme = Query("light"),
 ):
-    return agg.get_vo2(start, end, gender) or {"traces": [], "layout": {}}
+    return agg.get_vo2(start, end, gender, theme) or {"traces": [], "layout": {}}
 
 
 @app.get("/api/rhr-hrv")
 def rhr_hrv(
     start: date = Query(...),
     end: date = Query(...),
+    theme: Theme = Query("light"),
 ):
-    return agg.get_rhr_hrv(start, end) or {"traces": [], "layout": {}}
+    return agg.get_rhr_hrv(start, end, theme) or {"traces": [], "layout": {}}
 
 
 @app.get("/api/sleep-stages")
 def sleep_stages(
     start: date = Query(...),
     end: date = Query(...),
+    theme: Theme = Query("light"),
 ):
-    return agg.get_sleep_stages(start, end) or {"traces": [], "layout": {}}
+    return agg.get_sleep_stages(start, end, theme) or {"traces": [], "layout": {}}
 
 
 @app.get("/api/sleep-duration")
 def sleep_duration(
     start: date = Query(...),
     end: date = Query(...),
+    theme: Theme = Query("light"),
 ):
-    return agg.get_sleep_duration(start, end) or {"traces": [], "layout": {}}
+    return agg.get_sleep_duration(start, end, theme) or {"traces": [], "layout": {}}
 
 
 @app.get("/api/sleep-consistency")
 def sleep_consistency(
     start: date = Query(...),
     end: date = Query(...),
+    theme: Theme = Query("light"),
 ):
-    return agg.get_sleep_consistency(start, end) or {
+    return agg.get_sleep_consistency(start, end, theme) or {
         "traces": [],
         "layout": {},
     }
@@ -119,5 +128,6 @@ def sleep_consistency(
 def wrist_temp(
     start: date = Query(...),
     end: date = Query(...),
+    theme: Theme = Query("light"),
 ):
-    return agg.get_wrist_temp(start, end) or {"traces": [], "layout": {}}
+    return agg.get_wrist_temp(start, end, theme) or {"traces": [], "layout": {}}

@@ -45,20 +45,20 @@ export default function WorkoutPanel({ data }: Props) {
 
   if (!data.donut && !data.bar) {
     return (
-      <ChartCard title="Workouts" className="full-width">
+      <ChartCard title="Workouts">
         <div className="empty-msg">No workout data in selected range.</div>
       </ChartCard>
     );
   }
 
   return (
-    <ChartCard title="Workouts" className="full-width">
+    <ChartCard title="Workouts">
       <div className="workout-inner">
         <div>
           {filteredDonut && (
             <Plot
               data={filteredDonut.traces as Plotly.Data[]}
-              layout={{ ...filteredDonut.layout, height: 350, autosize: true } as Plotly.Layout}
+              layout={{ ...filteredDonut.layout, height: 300, autosize: true } as Plotly.Layout}
               config={{ responsive: true, displayModeBar: false }}
               useResizeHandler
               style={{ width: "100%" }}
@@ -69,7 +69,7 @@ export default function WorkoutPanel({ data }: Props) {
           {filteredBar && (
             <Plot
               data={filteredBar.traces as Plotly.Data[]}
-              layout={{ ...filteredBar.layout, height: 350, autosize: true } as Plotly.Layout}
+              layout={{ ...filteredBar.layout, height: 300, autosize: true } as Plotly.Layout}
               config={{ responsive: true, displayModeBar: false }}
               useResizeHandler
               style={{ width: "100%" }}

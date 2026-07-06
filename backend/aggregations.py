@@ -9,8 +9,11 @@ from typing import Any
 import pandas as pd
 
 from .constants import (
-    BLUE, GREEN, ORANGE, PINK, PURPLE, TEAL,
-    CHART_LAYOUT, SLEEP_STAGE_COLORS, build_workout_color_map,
+    ACCENT,
+    THEMES,
+    build_workout_color_map,
+    chart_layout,
+    sleep_stage_colors,
 )
 from .data_loader import (
     get_activity,
@@ -43,8 +46,27 @@ def filter_date(
     return df[(series >= start) & (series <= end)]
 
 
-def _base_layout(height: int = 400, **overrides: Any) -> dict:
-    layout = {**CHART_LAYOUT, "height": height, "margin": {"l": 48, "r": 24, "t": 32, "b": 40}}
+def _axis(theme: str, **overrides: Any) -> dict:
+    t = THEMES[theme]
+    axis = {
+        "gridcolor": t["grid"],
+        "zerolinecolor": t["grid"],
+        "linecolor": "rgba(0,0,0,0)",
+    }
+    axis.update(overrides)
+    return axis
+
+
+def _axis_title(text: str) -> dict:
+    return {"text": text, "font": {"size": 10}}
+
+
+def _base_layout(theme: str, height: int = 300, **overrides: Any) -> dict:
+    layout = {
+        **chart_layout(theme),
+        "height": height,
+        "margin": {"l": 44, "r": 20, "t": 24, "b": 36},
+    }
     layout.update(overrides)
     return layout
 
@@ -125,12 +147,14 @@ def get_kpis(start: date, end: date) -> dict:
 # ── Workouts ────────────────────────────────────────────────────────────────
 
 
-def get_workouts(start: date, end: date) -> dict | None:
+def get_workouts(start: date, end: date, theme: str = "light") -> dict | None:
+    t = THEMES[theme]
     wk = filter_date(load_workouts(), start, end)
     if wk.empty:
         return None
 
-    # Donut data
+    # Donut data — value_counts is ordered most-frequent-first, which drives
+    # both ramp color assignment and stacking order.
     wk_counts = (
         wk["workoutActivityType"]
         .str.replace("HKWorkoutActivityType", "")
@@ -142,14 +166,14 @@ def get_workouts(start: date, end: date) -> dict | None:
             "type": "pie",
             "labels": wk_counts.index.tolist(),
             "values": wk_counts.values.tolist(),
-            "hole": 0.45,
+            "hole": 0.62,
+            "sort": True,
             "marker": {
-                "colors": [
-                    color_map[t] for t in wk_counts.index
-                ],
-                "line": {"color": "#000000", "width": 1},
+                "colors": [color_map[t_] for t_ in wk_counts.index],
+                "line": {"color": t["card"], "width": 2},
             },
-            "textfont": {"color": "#1d1d1f"},
+            "textinfo": "percent",
+            "textfont": {"color": t["tick"], "size": 10},
             "showlegend": False,
             "hovertemplate": "%{label}: %{value} sessions<extra></extra>",
         }
@@ -165,8 +189,10 @@ def get_workouts(start: date, end: date) -> dict | None:
         wk2.groupby(["month", "type_short"]).size().reset_index(name="count")
     )
     bar_traces = []
-    for wtype in monthly["type_short"].unique():
+    for wtype in wk_counts.index:
         sub = monthly[monthly["type_short"] == wtype]
+        if sub.empty:
+            continue
         bar_traces.append(
             {
                 "type": "bar",
@@ -174,8 +200,8 @@ def get_workouts(start: date, end: date) -> dict | None:
                 "y": sub["count"].tolist(),
                 "name": wtype,
                 "marker": {
-                    "color": color_map.get(wtype, "#8E8E93"),
-                    "line": {"color": "#000000", "width": 1},
+                    "color": color_map.get(wtype, t["muted"]),
+                    "line": {"width": 0},
                 },
                 "showlegend": False,
                 "hovertemplate": f"{wtype}: " + "%{y} sessions<extra></extra>",
@@ -183,28 +209,27 @@ def get_workouts(start: date, end: date) -> dict | None:
         )
 
     # All workout types present (for shared legend)
-    all_types = sorted(set(wk_counts.index.tolist()))
+    all_types = sorted(wk_counts.index.tolist())
 
     return {
         "donut": {
             "traces": donut_traces,
-            "layout": _base_layout(),
+            "layout": _base_layout(
+                theme, margin={"l": 8, "r": 8, "t": 8, "b": 8}
+            ),
         },
         "bar": {
             "traces": bar_traces,
             "layout": _base_layout(
+                theme,
                 barmode="stack",
-                xaxis={"gridcolor": "#e5e5e7", "zerolinecolor": "#d1d1d6"},
-                yaxis={
-                    "gridcolor": "#e5e5e7",
-                    "zerolinecolor": "#d1d1d6",
-                    "title": {"text": "Sessions"},
-                },
+                bargap=0.35,
+                yaxis=_axis(theme, title=_axis_title("Sessions")),
             ),
         },
         "types": [
-            {"name": t, "color": color_map[t]}
-            for t in all_types
+            {"name": t_, "color": color_map[t_]}
+            for t_ in all_types
         ],
     }
 
@@ -212,23 +237,26 @@ def get_workouts(start: date, end: date) -> dict | None:
 # ── VO2 Max ─────────────────────────────────────────────────────────────────
 
 
-VO2_BANDS: dict[str, list[tuple[str, float, float, str]]] = {
+VO2_BANDS: dict[str, list[tuple[str, float, float]]] = {
     "male": [
-        ("Superior",   51.1, 60.0, GREEN),
-        ("Excellent",  43.9, 51.1, BLUE),
-        ("Good",       36.7, 43.9, ORANGE),
-        ("Below Good", 20.0, 36.7, "#FF3B30"),
+        ("Superior",   51.1, 60.0),
+        ("Excellent",  43.9, 51.1),
+        ("Good",       36.7, 43.9),
+        ("Below Good", 20.0, 36.7),
     ],
     "female": [
-        ("Superior",   44.2, 55.0, GREEN),
-        ("Excellent",  37.8, 44.2, BLUE),
-        ("Good",       30.2, 37.8, ORANGE),
-        ("Below Good", 20.0, 30.2, "#FF3B30"),
+        ("Superior",   44.2, 55.0),
+        ("Excellent",  37.8, 44.2),
+        ("Good",       30.2, 37.8),
+        ("Below Good", 20.0, 30.2),
     ],
 }
 
 
-def get_vo2(start: date, end: date, gender: str = "male") -> dict | None:
+def get_vo2(
+    start: date, end: date, gender: str = "male", theme: str = "light"
+) -> dict | None:
+    t = THEMES[theme]
     vo2 = query_records(start, end, "HKQuantityTypeIdentifierVO2Max")
     if vo2.empty:
         return None
@@ -241,18 +269,18 @@ def get_vo2(start: date, end: date, gender: str = "male") -> dict | None:
     shapes = [
         {
             "type": "rect", "xref": "paper", "x0": 0, "x1": 1,
-            "y0": y0, "y1": y1, "fillcolor": color, "opacity": 0.08,
-            "line": {"width": 0},
+            "y0": y0, "y1": y1, "fillcolor": t["text"], "opacity": 0.04,
+            "layer": "below", "line": {"width": 0},
         }
-        for _, y0, y1, color in bands
+        for _, y0, y1 in bands
     ]
     annotations = [
         {
-            "x": 1, "xref": "paper", "xanchor": "right",
+            "x": 0.99, "xref": "paper", "xanchor": "right",
             "y": (y0 + y1) / 2, "text": label, "showarrow": False,
-            "font": {"size": 10, "color": "#86868b"},
+            "font": {"size": 9, "color": t["tick"]},
         }
-        for label, y0, y1, _ in bands
+        for label, y0, y1 in bands
     ]
 
     traces = [
@@ -262,14 +290,14 @@ def get_vo2(start: date, end: date, gender: str = "male") -> dict | None:
             "y": _safe_list(vo2_daily["value"]),
             "mode": "markers",
             "name": "VO2 Max",
-            "marker": {"color": BLUE, "size": 5, "opacity": 0.6},
+            "marker": {"color": t["dot"], "size": 4, "opacity": 0.55},
             "hovertemplate": "%{x}<br>%{y:.1f} mL/min/kg<extra></extra>",
         }
     ]
 
     if len(vo2_daily) > 10:
         vo2_daily["rolling"] = (
-            vo2_daily["value"].rolling(10, min_periods=3).mean()
+            vo2_daily["value"].rolling(11, min_periods=3).mean()
         )
         traces.append(
             {
@@ -278,7 +306,7 @@ def get_vo2(start: date, end: date, gender: str = "male") -> dict | None:
                 "y": _safe_list(vo2_daily["rolling"]),
                 "mode": "lines",
                 "name": "Trend",
-                "line": {"color": ORANGE, "width": 2, "shape": "spline"},
+                "line": {"color": ACCENT, "width": 2.5, "shape": "spline"},
                 "hovertemplate": "%{x}<br>Trend: %{y:.1f}<extra></extra>",
             }
         )
@@ -286,13 +314,10 @@ def get_vo2(start: date, end: date, gender: str = "male") -> dict | None:
     return {
         "traces": traces,
         "layout": _base_layout(
+            theme,
             shapes=shapes,
             annotations=annotations,
-            yaxis={
-                "title": {"text": "mL/min/kg"},
-                "gridcolor": "#e5e5e7",
-                "zerolinecolor": "#d1d1d6",
-            },
+            yaxis=_axis(theme, title=_axis_title("mL/min/kg")),
         ),
     }
 
@@ -300,7 +325,8 @@ def get_vo2(start: date, end: date, gender: str = "male") -> dict | None:
 # ── RHR & HRV ──────────────────────────────────────────────────────────────
 
 
-def get_rhr_hrv(start: date, end: date) -> dict | None:
+def get_rhr_hrv(start: date, end: date, theme: str = "light") -> dict | None:
+    t = THEMES[theme]
     rhr = query_records(start, end, "HKQuantityTypeIdentifierRestingHeartRate")
     hrv = query_records(start, end, "HKQuantityTypeIdentifierHeartRateVariabilitySDNN")
     if rhr.empty or hrv.empty:
@@ -314,36 +340,36 @@ def get_rhr_hrv(start: date, end: date) -> dict | None:
     traces = [
         {
             "type": "scatter",
-            "x": rhr_w.index.strftime("%Y-%m-%d").tolist(),
-            "y": [round(v, 1) for v in rhr_w.values],
-            "name": "Resting HR (bpm)",
-            "line": {"color": PINK, "width": 2, "shape": "spline"},
-            "yaxis": "y",
-            "hovertemplate": "%{x}<br>RHR: %{y:.1f} bpm<extra></extra>",
-        },
-        {
-            "type": "scatter",
             "x": hrv_w.index.strftime("%Y-%m-%d").tolist(),
             "y": [round(v, 1) for v in hrv_w.values],
             "name": "HRV SDNN (ms)",
-            "line": {"color": BLUE, "width": 2, "shape": "spline"},
+            "line": {"color": t["hrv"], "width": 2, "dash": "dot"},
+            "opacity": 0.9,
             "yaxis": "y2",
             "hovertemplate": "%{x}<br>HRV: %{y:.1f} ms<extra></extra>",
+        },
+        {
+            "type": "scatter",
+            "x": rhr_w.index.strftime("%Y-%m-%d").tolist(),
+            "y": [round(v, 1) for v in rhr_w.values],
+            "name": "Resting HR (bpm)",
+            "line": {"color": ACCENT, "width": 2.5, "shape": "spline"},
+            "yaxis": "y",
+            "hovertemplate": "%{x}<br>RHR: %{y:.1f} bpm<extra></extra>",
         },
     ]
 
     layout = _base_layout(
-        yaxis={
-            "title": {"text": "Resting HR (bpm)"},
-            "gridcolor": "#e5e5e7",
-            "zerolinecolor": "#d1d1d6",
-        },
+        theme,
+        margin={"l": 44, "r": 44, "t": 24, "b": 36},
+        yaxis=_axis(theme, title=_axis_title("bpm")),
         yaxis2={
-            "title": {"text": "HRV SDNN (ms)"},
+            "title": _axis_title("HRV ms"),
             "overlaying": "y",
             "side": "right",
-            "gridcolor": "#e5e5e7",
-            "zerolinecolor": "#d1d1d6",
+            "gridcolor": "rgba(0,0,0,0)",
+            "zerolinecolor": "rgba(0,0,0,0)",
+            "linecolor": "rgba(0,0,0,0)",
         },
     )
 
@@ -353,7 +379,8 @@ def get_rhr_hrv(start: date, end: date) -> dict | None:
 # ── Sleep Stages ────────────────────────────────────────────────────────────
 
 
-def get_sleep_stages(start: date, end: date) -> dict | None:
+def get_sleep_stages(start: date, end: date, theme: str = "light") -> dict | None:
+    t = THEMES[theme]
     sdf = query_sleep(start, end)
     if sdf.empty:
         return None
@@ -381,6 +408,7 @@ def get_sleep_stages(start: date, end: date) -> dict | None:
     for s in stage_order:
         weekly[s] = weekly[s] / nights_per_week / 60
 
+    stage_colors = sleep_stage_colors(theme)
     traces = []
     for stage in stage_order:
         traces.append(
@@ -389,7 +417,7 @@ def get_sleep_stages(start: date, end: date) -> dict | None:
                 "x": weekly.index.strftime("%Y-%m-%d").tolist(),
                 "y": [round(v, 2) for v in weekly[stage]],
                 "name": stage,
-                "marker": {"color": SLEEP_STAGE_COLORS[stage]},
+                "marker": {"color": stage_colors[stage], "line": {"width": 0}},
                 "hovertemplate": f"{stage}: " + "%{y:.1f} hrs<extra></extra>",
             }
         )
@@ -397,12 +425,20 @@ def get_sleep_stages(start: date, end: date) -> dict | None:
     return {
         "traces": traces,
         "layout": _base_layout(
+            theme,
             barmode="stack",
-            yaxis={
-                "title": {"text": "Avg Hours / Night"},
-                "gridcolor": "#e5e5e7",
-                "zerolinecolor": "#d1d1d6",
+            bargap=0.25,
+            showlegend=True,
+            legend={
+                "orientation": "h",
+                "y": 1.12,
+                "x": 1,
+                "xanchor": "right",
+                "traceorder": "reversed",
+                "font": {"size": 10, "color": t["tick"]},
+                "bgcolor": "rgba(0,0,0,0)",
             },
+            yaxis=_axis(theme, title=_axis_title("Hrs / night")),
         ),
     }
 
@@ -410,7 +446,8 @@ def get_sleep_stages(start: date, end: date) -> dict | None:
 # ── Sleep Duration ──────────────────────────────────────────────────────────
 
 
-def get_sleep_duration(start: date, end: date) -> dict | None:
+def get_sleep_duration(start: date, end: date, theme: str = "light") -> dict | None:
+    t = THEMES[theme]
     sdf = query_sleep(start, end)
     if sdf.empty:
         return None
@@ -434,7 +471,7 @@ def get_sleep_duration(start: date, end: date) -> dict | None:
             "y": [round(v, 2) for v in total_hrs.values],
             "mode": "markers",
             "name": "Nightly",
-            "marker": {"size": 3, "opacity": 0.4, "color": BLUE},
+            "marker": {"size": 3, "opacity": 0.35, "color": t["dot"]},
             "hovertemplate": "%{x}<br>%{y:.1f} hrs<extra></extra>",
         },
         {
@@ -443,7 +480,7 @@ def get_sleep_duration(start: date, end: date) -> dict | None:
             "y": [round(v, 2) for v in rolling.values],
             "mode": "lines",
             "name": "7-day avg",
-            "line": {"color": GREEN, "width": 2, "shape": "spline"},
+            "line": {"color": ACCENT, "width": 2.5, "shape": "spline"},
             "hovertemplate": "%{x}<br>Avg: %{y:.1f} hrs<extra></extra>",
         },
     ]
@@ -451,11 +488,8 @@ def get_sleep_duration(start: date, end: date) -> dict | None:
     return {
         "traces": traces,
         "layout": _base_layout(
-            yaxis={
-                "title": {"text": "Hours"},
-                "gridcolor": "#e5e5e7",
-                "zerolinecolor": "#d1d1d6",
-            },
+            theme,
+            yaxis=_axis(theme, title=_axis_title("Hours")),
         ),
     }
 
@@ -463,7 +497,8 @@ def get_sleep_duration(start: date, end: date) -> dict | None:
 # ── Sleep Consistency ───────────────────────────────────────────────────────
 
 
-def get_sleep_consistency(start: date, end: date) -> dict | None:
+def get_sleep_consistency(start: date, end: date, theme: str = "light") -> dict | None:
+    t = THEMES[theme]
     sdf = query_sleep(start, end)
     if sdf.empty:
         return None
@@ -521,13 +556,14 @@ def get_sleep_consistency(start: date, end: date) -> dict | None:
 
     idx_str = [str(d) for d in consistency.index]
 
+    wake_color = "#F8B296"
     traces = [
         {
             "type": "scatter",
             "x": idx_str,
             "y": _safe_list(consistency["bed_hour_adj"]),
             "mode": "markers",
-            "marker": {"size": 3, "opacity": 0.4, "color": PURPLE},
+            "marker": {"size": 3, "opacity": 0.35, "color": ACCENT},
             "name": "Bedtime",
             "text": consistency["bed_label"].tolist(),
             "hovertemplate": "%{x}<br>%{text}<extra></extra>",
@@ -539,7 +575,7 @@ def get_sleep_consistency(start: date, end: date) -> dict | None:
             "x": idx_str,
             "y": _safe_list(consistency["bed_roll"]),
             "mode": "lines",
-            "line": {"color": PURPLE, "width": 2, "shape": "spline"},
+            "line": {"color": ACCENT, "width": 2, "shape": "spline"},
             "name": "Bedtime trend",
             "showlegend": False,
             "text": consistency["bed_roll_label"].tolist(),
@@ -552,7 +588,7 @@ def get_sleep_consistency(start: date, end: date) -> dict | None:
             "x": idx_str,
             "y": _safe_list(consistency["wake_hour"]),
             "mode": "markers",
-            "marker": {"size": 3, "opacity": 0.4, "color": ORANGE},
+            "marker": {"size": 3, "opacity": 0.35, "color": wake_color},
             "name": "Wake",
             "text": consistency["wake_label"].tolist(),
             "hovertemplate": "%{x}<br>%{text}<extra></extra>",
@@ -564,7 +600,7 @@ def get_sleep_consistency(start: date, end: date) -> dict | None:
             "x": idx_str,
             "y": _safe_list(consistency["wake_roll"]),
             "mode": "lines",
-            "line": {"color": ORANGE, "width": 2, "shape": "spline"},
+            "line": {"color": wake_color, "width": 2, "shape": "spline"},
             "name": "Wake trend",
             "showlegend": False,
             "text": consistency["wake_roll_label"].tolist(),
@@ -575,27 +611,35 @@ def get_sleep_consistency(start: date, end: date) -> dict | None:
     ]
 
     layout = _base_layout(
+        theme,
         showlegend=False,
         grid={"rows": 1, "columns": 2, "pattern": "independent"},
-        margin={"l": 64, "r": 56, "t": 32, "b": 40},
-        xaxis={"gridcolor": "#e5e5e7", "zerolinecolor": "#d1d1d6",
-               "domain": [0, 0.47]},
-        yaxis={"gridcolor": "#e5e5e7", "zerolinecolor": "#d1d1d6",
-               "tickvals": bed_ticks, "ticktext": bed_labels,
-               "range": [-6, 6], "domain": [0, 1]},
-        xaxis2={"gridcolor": "#e5e5e7", "zerolinecolor": "#d1d1d6",
-                "domain": [0.53, 1], "anchor": "y2"},
-        yaxis2={"gridcolor": "#e5e5e7", "zerolinecolor": "#d1d1d6",
-                "tickvals": wake_ticks, "ticktext": wake_labels,
-                "range": [4, 14], "side": "right",
-                "domain": [0, 1], "anchor": "x2"},
+        margin={"l": 44, "r": 44, "t": 28, "b": 36},
+        xaxis=_axis(theme, domain=[0, 0.46]),
+        yaxis=_axis(
+            theme,
+            tickvals=bed_ticks,
+            ticktext=bed_labels,
+            range=[-6, 6],
+            domain=[0, 1],
+        ),
+        xaxis2=_axis(theme, domain=[0.54, 1], anchor="y2"),
+        yaxis2=_axis(
+            theme,
+            tickvals=wake_ticks,
+            ticktext=wake_labels,
+            range=[4, 14],
+            side="right",
+            domain=[0, 1],
+            anchor="x2",
+        ),
         annotations=[
-            {"text": "Bedtime", "x": 0.235, "xref": "paper",
-             "y": 1.06, "yref": "paper", "showarrow": False,
-             "font": {"size": 14, "color": "#1d1d1f"}},
-            {"text": "Wake Time", "x": 0.765, "xref": "paper",
-             "y": 1.06, "yref": "paper", "showarrow": False,
-             "font": {"size": 14, "color": "#1d1d1f"}},
+            {"text": "Bedtime", "x": 0.18, "xref": "paper",
+             "y": 1.1, "yref": "paper", "showarrow": False,
+             "font": {"size": 11, "color": t["tick"]}},
+            {"text": "Wake Time", "x": 0.8, "xref": "paper",
+             "y": 1.1, "yref": "paper", "showarrow": False,
+             "font": {"size": 11, "color": t["tick"]}},
         ],
     )
 
@@ -605,7 +649,7 @@ def get_sleep_consistency(start: date, end: date) -> dict | None:
 # ── Wrist Temperature ───────────────────────────────────────────────────────
 
 
-def get_wrist_temp(start: date, end: date) -> dict | None:
+def get_wrist_temp(start: date, end: date, theme: str = "light") -> dict | None:
     wtemp = query_records(
         start, end, "HKQuantityTypeIdentifierAppleSleepingWristTemperature"
     )
@@ -620,7 +664,7 @@ def get_wrist_temp(start: date, end: date) -> dict | None:
             "y": [round(v, 2) for v in wtemp["value"]],
             "mode": "markers",
             "name": "Wrist Temp",
-            "marker": {"color": TEAL, "size": 4, "opacity": 0.5},
+            "marker": {"color": ACCENT, "size": 3, "opacity": 0.4},
             "hovertemplate": "%{x}<br>%{y:.2f} °C<extra></extra>",
         }
     ]
@@ -642,7 +686,7 @@ def get_wrist_temp(start: date, end: date) -> dict | None:
                 "y": [round(v, 2) for v in wtemp_daily["rolling"]],
                 "mode": "lines",
                 "name": "7-day avg",
-                "line": {"color": TEAL, "width": 2, "shape": "spline"},
+                "line": {"color": ACCENT, "width": 2.5, "shape": "spline"},
                 "hovertemplate": "%{x}<br>Avg: %{y:.2f} °C<extra></extra>",
             }
         )
@@ -650,10 +694,7 @@ def get_wrist_temp(start: date, end: date) -> dict | None:
     return {
         "traces": traces,
         "layout": _base_layout(
-            yaxis={
-                "title": {"text": "°C delta"},
-                "gridcolor": "#e5e5e7",
-                "zerolinecolor": "#d1d1d6",
-            },
+            theme,
+            yaxis=_axis(theme, title=_axis_title("°C")),
         ),
     }

@@ -12,17 +12,19 @@ Visualize your Apple Health data — sleep stages, workouts, VO2 max, resting he
 
 ## 2. Set Up the Dashboard
 
-**Prerequisites:** [uv](https://docs.astral.sh/uv/) (Python toolchain) and [Node.js](https://nodejs.org/) >= 18.
+**Prerequisites:** [uv](https://docs.astral.sh/uv/) (Python toolchain) and [Node.js](https://nodejs.org/) >= 20.19.
 
-### Option A — With an LLM (non-technical)
+### Option A — With an AI agent (non-technical)
 
-Open any LLM that can run shell commands — Claude Code, Cursor, Windsurf, GitHub Copilot, ChatGPT with terminal access, etc. Point it at this project and say:
+Use any AI agent that can run shell commands — Claude Code, Cursor, Windsurf, GitHub Copilot, ChatGPT with terminal access, etc. Point it at this project and say:
 
-> Set up the Apple Health dashboard with my health export. Follow the instructions in SETUP.md.
+```
+Set up the Apple Health dashboard with my health export. Follow the instructions in SETUP.md.
+```
 
-The LLM will read [`SETUP.md`](SETUP.md), install dependencies, parse your data, and start the dashboard for you.
+The agent will take care of the rest.
 
-### Option B — With the terminal (technical)
+### Option B — Manually
 
 ```bash
 scripts/setup.sh /path/to/export.zip   # full pipeline: unzip, install deps, parse, serve
@@ -38,8 +40,8 @@ scripts/run.sh
 
 Once setup completes, open http://localhost:5173 in your browser. The dashboard shows:
 
-- **KPI cards** — daily step count, distance, flights climbed, active energy
-- **Workouts** — history with duration, calories, heart rate, and distance
+- **KPI cards** — daily steps, active energy, exercise minutes, stand hours
+- **Workouts** — session breakdown by type and monthly training volume
 - **VO2 max** — trend over time with age/gender reference bands
 - **Resting heart rate & HRV** — daily trends
 - **Sleep stages** — nightly breakdown (REM, deep, core, awake)

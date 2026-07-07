@@ -2,6 +2,8 @@
 
 Visualize your Apple Health data — sleep stages, workouts, VO2 max, resting heart rate, HRV, wrist temperature, and more — in a local dashboard built with FastAPI and React.
 
+![Dashboard preview in light and dark mode](dashboard-preview-light-dark.png)
+
 ## 1. Get Your Health Data
 
 1. Open the **Health** app on your iPhone

@@ -97,9 +97,11 @@ def get_kpis(start: date, end: date) -> dict:
     activity = get_activity()
     act_f = filter_date(activity, start, end, col="date")
 
-    # Preceding period of equal length for delta calculation
-    range_days = (end - start).days
-    prev_start = start - pd.Timedelta(days=range_days)
+    # Preceding period of equal length for delta calculation. The current
+    # window is inclusive of both ends, so it spans (end - start) + 1 days;
+    # the previous window must span the same to keep totals comparable.
+    window_days = (end - start).days + 1
+    prev_start = start - pd.Timedelta(days=window_days)
     prev_end = start - pd.Timedelta(days=1)
     act_prev = filter_date(activity, prev_start, prev_end, col="date")
 
@@ -140,6 +142,15 @@ def get_kpis(start: date, end: date) -> dict:
         }
     else:
         result["steps"] = {"value": 0, "delta": 0}
+
+    # Workout sessions — a period total rather than a daily average, so it is
+    # counted directly instead of going through _kpi(). get_workouts() is
+    # cached, so the second call is free.
+    workouts = load_workouts()
+    wk_cur = len(filter_date(workouts, start, end))
+    wk_prev = len(filter_date(workouts, prev_start, prev_end))
+    delta_wk = ((wk_cur - wk_prev) / wk_prev * 100) if wk_prev else 0
+    result["workouts"] = {"value": wk_cur, "delta": round(float(delta_wk), 1)}
 
     return result
 

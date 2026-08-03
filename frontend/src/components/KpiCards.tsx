@@ -50,6 +50,11 @@ export default function KpiCards({ data }: Props) {
         delta={data.steps.delta}
         format={(v) => v.toLocaleString("en-US", { maximumFractionDigits: 0 })}
       />
+      <KpiCell
+        label="Total workouts"
+        value={data.workouts.value}
+        delta={data.workouts.delta}
+      />
     </div>
   );
 }

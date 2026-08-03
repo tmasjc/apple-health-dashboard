@@ -332,7 +332,7 @@ button {
 
 .kpi-strip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   border-radius: 18px;
   overflow: hidden;
   background: var(--card);

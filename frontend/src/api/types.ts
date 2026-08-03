@@ -19,6 +19,7 @@ export interface KpisResponse {
   exercise_min: KpiItem;
   stand_hrs: KpiItem;
   steps: KpiItem;
+  workouts: KpiItem;
 }
 
 export interface PlotData {

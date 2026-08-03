@@ -10,6 +10,8 @@ import pandas as pd
 
 from .constants import (
     ACCENT,
+    OTHER_LABEL,
+    OTHER_MIN_SHARE,
     THEMES,
     build_workout_color_map,
     chart_layout,
@@ -164,13 +166,29 @@ def get_workouts(start: date, end: date, theme: str = "light") -> dict | None:
     if wk.empty:
         return None
 
-    # Donut data — value_counts is ordered most-frequent-first, which drives
-    # both ramp color assignment and stacking order.
-    wk_counts = (
-        wk["workoutActivityType"]
-        .str.replace("HKWorkoutActivityType", "")
-        .value_counts()
+    wk2 = wk.copy()
+    wk2["type_short"] = wk2["workoutActivityType"].str.replace(
+        "HKWorkoutActivityType", ""
     )
+
+    # Fold activities below OTHER_MIN_SHARE of the period's sessions into one
+    # bucket, so a long tail of one-off workouts doesn't crowd the legend or
+    # exhaust the colour ramp. The share is measured over the whole selected
+    # period, not per month, and relabelling here means the donut, the bars
+    # and the legend all inherit the same categories. Apple's own "Other"
+    # activity type merges into the bucket by virtue of sharing its label.
+    raw_counts = wk2["type_short"].value_counts()
+    minor = raw_counts[raw_counts < len(wk2) * OTHER_MIN_SHARE].index
+    if len(minor):
+        wk2.loc[wk2["type_short"].isin(minor), "type_short"] = OTHER_LABEL
+
+    # Ordered most-frequent-first, which drives both ramp color assignment and
+    # stacking order — except the bucket, which is pinned last at any size.
+    wk_counts = wk2["type_short"].value_counts()
+    if OTHER_LABEL in wk_counts.index:
+        wk_counts = pd.concat(
+            [wk_counts.drop(OTHER_LABEL), wk_counts[[OTHER_LABEL]]]
+        )
     color_map = build_workout_color_map(wk_counts.index.tolist())
     donut_traces = [
         {
@@ -178,7 +196,9 @@ def get_workouts(start: date, end: date, theme: str = "light") -> dict | None:
             "labels": wk_counts.index.tolist(),
             "values": wk_counts.values.tolist(),
             "hole": 0.62,
-            "sort": True,
+            # Honour the explicit ordering above rather than re-sorting, which
+            # would float the Other bucket out of last place.
+            "sort": False,
             "marker": {
                 "colors": [color_map[t_] for t_ in wk_counts.index],
                 "line": {"color": t["card"], "width": 2},
@@ -190,11 +210,7 @@ def get_workouts(start: date, end: date, theme: str = "light") -> dict | None:
         }
     ]
 
-    # Bar data
-    wk2 = wk.copy()
-    wk2["type_short"] = wk2["workoutActivityType"].str.replace(
-        "HKWorkoutActivityType", ""
-    )
+    # Bar data — wk2 already carries the collapsed type_short column.
     wk2["month"] = wk2["startDate"].dt.to_period("M").dt.to_timestamp()
     monthly = (
         wk2.groupby(["month", "type_short"]).size().reset_index(name="count")
@@ -219,8 +235,11 @@ def get_workouts(start: date, end: date, theme: str = "light") -> dict | None:
             }
         )
 
-    # All workout types present (for shared legend)
-    all_types = sorted(wk_counts.index.tolist())
+    # All workout types present (for shared legend) — alphabetical so the
+    # chips are easy to scan, with the catch-all bucket pinned to the end.
+    all_types = sorted(t_ for t_ in wk_counts.index if t_ != OTHER_LABEL)
+    if OTHER_LABEL in wk_counts.index:
+        all_types.append(OTHER_LABEL)
 
     return {
         "donut": {

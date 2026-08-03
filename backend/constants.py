@@ -45,7 +45,15 @@ THEMES = {
     },
 }
 
+# Activities accounting for less than this share of the period's sessions are
+# folded into a single OTHER_LABEL bucket. Neutral grey keeps the bucket
+# visually subordinate to the coral ramp used for real activities.
+OTHER_LABEL = "Other"
+OTHER_MIN_SHARE = 0.03
+OTHER_COLOR = "#B8BBC6"
+
 WORKOUT_COLORS = {
+    OTHER_LABEL: OTHER_COLOR,
     "FunctionalStrengthTraining": "#E85D3A",
     "HighIntensityIntervalTraining": "#B8401F",
     "Cycling": "#F07B54",
